@@ -34,75 +34,6 @@ interface AppContextType {
   deleteHelper: (id: string) => void;
 }
 
-const defaultHelpers: Helper[] = [
-  {
-    id: '1',
-    name: 'Spiritual Guide',
-    type: 'Spiritual Guide',
-    description: 'Provides spiritual guidance and mindfulness support',
-    tone: 'Gentle',
-    interactionStyle: 'meditative',
-    focus: 'mindfulness',
-    isDefault: true,
-    createdAt: new Date()
-  },
-  {
-    id: '2',
-    name: 'Relationship Coach',
-    type: 'Relationship Coach',
-    description: 'Helps with relationship advice and communication',
-    tone: 'Encouraging',
-    interactionStyle: 'supportive',
-    focus: 'guidance',
-    isDefault: true,
-    createdAt: new Date()
-  },
-  {
-    id: '3',
-    name: 'Mental Wellness Helper',
-    type: 'Mental Wellness Helper',
-    description: 'Supports mental health and emotional wellbeing',
-    tone: 'Gentle',
-    interactionStyle: 'supportive',
-    focus: 'listening',
-    isDefault: true,
-    createdAt: new Date()
-  },
-  {
-    id: '4',
-    name: 'Career Coach',
-    type: 'Career Coach',
-    description: 'Provides career guidance and professional development',
-    tone: 'Direct',
-    interactionStyle: 'practical',
-    focus: 'guidance',
-    isDefault: true,
-    createdAt: new Date()
-  },
-  {
-    id: '5',
-    name: 'Friend & Advisor',
-    type: 'Friend & Advisor',
-    description: 'Casual conversation and friendly advice',
-    tone: 'Encouraging',
-    interactionStyle: 'conversational',
-    focus: 'listening',
-    isDefault: true,
-    createdAt: new Date()
-  },
-  {
-    id: '6',
-    name: 'Health Consultant',
-    type: 'Health Consultant',
-    description: 'Wellness and health-related guidance',
-    tone: 'Direct',
-    interactionStyle: 'practical',
-    focus: 'guidance',
-    isDefault: true,
-    createdAt: new Date()
-  }
-];
-
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const useAppContext = () => {
@@ -117,15 +48,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [helperType, setHelperType] = useState<HelperType>('Mentor');
   const [tonePreference, setTonePreference] = useState<TonePreference>('Gentle');
-  const [helpers, setHelpers] = useState<Helper[]>(defaultHelpers);
-  const [activeHelper, setActiveHelperState] = useState<Helper | null>(defaultHelpers[0]);
+  const [helpers, setHelpers] = useState<Helper[]>();
+  const [activeHelper, setActiveHelperState] = useState<Helper | null>();
 
   const toggleSidebar = () => {
     setSidebarOpen(prev => !prev);
   };
 
   const setActiveHelper = (helper: Helper) => {
-    console.log('AppContext: Setting active helper to:', helper.name, helper.id);
     setActiveHelperState(helper);
   };
 

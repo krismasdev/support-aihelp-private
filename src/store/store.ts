@@ -1,6 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 import userReducer from './userSlice';
 import helperReducer from './helperSlice';
+import messagesReducer from './messagesSlice';
 // Load state from localStorage
 const loadState = () => {
   try {
@@ -31,6 +32,7 @@ export const store = configureStore({
   reducer: {
     user: userReducer,
     helpers: helperReducer,
+    messages: messagesReducer,
   },
   preloadedState,
 });

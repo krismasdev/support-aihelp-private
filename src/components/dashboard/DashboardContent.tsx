@@ -1,4 +1,4 @@
-import { ChatSection } from './sections/ChatSection';
+import { ChatSectionRedux } from './sections/ChatSectionRedux';
 import { HelperSection } from './sections/HelperSection';
 import { InsightsSection } from './sections/InsightsSection';
 import { ToolsSection } from './sections/ToolsSection';
@@ -15,7 +15,7 @@ export const DashboardContent = ({ activeSection, userProfile }: DashboardConten
   const renderSection = () => {
     switch (activeSection) {
       case 'home':
-        return <ChatSection userProfile={userProfile} />;
+        return <ChatSectionRedux userProfile={userProfile} />;
       case 'helper':
         return <HelperSection userProfile={userProfile} />;
       case 'insights':
@@ -27,13 +27,13 @@ export const DashboardContent = ({ activeSection, userProfile }: DashboardConten
       case 'settings':
         return <SettingsSection />;
       default:
-        return <ChatSection userProfile={userProfile} />;
+        return <ChatSectionRedux userProfile={userProfile} />;
     }
   };
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="p-8">
+      <div className="p-8 h-full">
         {renderSection()}
       </div>
     </div>
