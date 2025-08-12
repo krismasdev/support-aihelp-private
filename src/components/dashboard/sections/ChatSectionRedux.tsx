@@ -70,7 +70,7 @@ Focus: ${helper.focus}`;
     }
   }, [activeHelper, userId, dispatch]);
 
-  const OPENAI_API_KEY = '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'; // Move to env in production
+  const OPENAI_API_KEY = '1111'; // Move to env in production
 
   // Scroll to bottom when messages change
   useEffect(() => {
