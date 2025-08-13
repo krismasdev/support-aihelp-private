@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Send, Mic, Phone, Loader2, Pause, BookOpen, Wrench, Package } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { VoiceCallDialog } from '../voice/VoiceCallDialog';
@@ -12,6 +12,8 @@ import { selectUserId } from '@/store/userSlice';
 import { fetchHelpers, selectHelpers, selectDefaultHelper } from '@/store/helperSlice';
 import { fetchMessages, sendMessage, selectMessagesForHelper, selectMessagesLoading } from '@/store/messagesSlice';
 import { supabase } from '@/lib/supabase';
+import { VoiceRecordingDialog } from '../voice/VoiceRecordingDialog'; // <-- Replace RecordingModal import
+import { UserProfile } from '@/store/userSlice';
 
 interface ChatSectionProps {
   userProfile: UserProfile;
@@ -41,6 +43,7 @@ export const ChatSectionRedux = ({ userProfile }: ChatSectionProps) => {
   const [helperTyping, setHelperTyping] = useState(false);
   const [optimisticMessages, setOptimisticMessages] = useState<any[]>([]);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isVoiceDialogOpen, setIsVoiceDialogOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const currentMessages = useSelector((state: any) =>
@@ -48,6 +51,7 @@ export const ChatSectionRedux = ({ userProfile }: ChatSectionProps) => {
   );
 
   const allMessages = [...currentMessages, ...optimisticMessages];
+  const avatarUrl = useSelector((state: any) => state.user.profile?.avatar_url);
 
   const buildSystemPrompt = (helper: any) => {
     return `You are ${helper.name}, a ${helper.type}. 
@@ -70,7 +74,7 @@ Focus: ${helper.focus}`;
     }
   }, [activeHelper, userId, dispatch]);
 
-  const OPENAI_API_KEY = '1111'; // Move to env in production
+  const OPENAI_API_KEY = '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'; // Move to env in production
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -195,6 +199,24 @@ Focus: ${helper.focus}`;
     }
   }, [messagesLoading, isInitialLoad]);
 
+  // Microphone check and open dialog
+  const handleMicClick = useCallback(async () => {
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      setIsVoiceDialogOpen(true);
+    } catch (err) {
+      alert('Please connect your microphone.');
+    }
+  }, []);
+
+  // Handle sending the audio blob (you can add speech-to-text here if needed)
+  const handleSendRecording = async (audioBlob: Blob) => {
+    // Example: send audioBlob to your backend or convert to text
+    // For now, just close the dialog
+    setIsVoiceDialogOpen(false);
+    // You can add speech-to-text conversion and message sending logic here
+  };
+
   return (
     <div className="space-y-6 h-full flex flex-col">
       <div className="flex items-center justify-between">
@@ -231,38 +253,38 @@ Focus: ${helper.focus}`;
             <Badge variant="secondary" className="text-xs">
               {helpers.length} available
             </Badge>
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {helpers.map((helper) => (
-                <Button
-                  key={helper.id}
-                  size="sm"
-                  variant={activeHelper?.id === helper.id ? "default" : "outline"}
-                  onClick={() => handleHelperSwitch(helper)}
-                  disabled={!!selectingHelperId}
-                  className={`flex items-center gap-1 h-9 text-sm px-3 w-fit py-1 transition-all ${activeHelper?.id === helper.id
-                    ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md border-2 border-indigo-600'
-                    : 'hover:bg-indigo-50 border-indigo-200 hover:border-indigo-300'
-                    }`}
-                >
-                  <span className="text-md">
-                    {selectingHelperId === helper.id ? (
-                      <Loader2 className="animate-spin" />
-                    ) : (
-                      helperIcons[helper.type] || '🤖'
-                    )}
-                  </span>
-                  <span className="text-md font-medium text-center leading-tight">{helper.name}</span>
-                  {/* <span className="text-xs opacity-75">{helper.tone}</span> */}
-                </Button>
-              ))}
-            </div>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {helpers.map((helper) => (
+              <Button
+                key={helper.id}
+                size="sm"
+                variant={activeHelper?.id === helper.id ? "default" : "outline"}
+                onClick={() => handleHelperSwitch(helper)}
+                disabled={!!selectingHelperId}
+                className={`flex items-center gap-1 h-9 text-sm px-3 w-fit py-1 transition-all ${activeHelper?.id === helper.id
+                  ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md border-2 border-indigo-600'
+                  : 'hover:bg-indigo-50 border-indigo-200 hover:border-indigo-300'
+                  }`}
+              >
+                <span className="text-md">
+                  {selectingHelperId === helper.id ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    helperIcons[helper.type] || '🤖'
+                  )}
+                </span>
+                <span className="text-md font-medium text-center leading-tight">{helper.name}</span>
+                {/* <span className="text-xs opacity-75">{helper.tone}</span> */}
+              </Button>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
       <Card className="h-80 flex-1">
         <CardContent className="p-0 h-full flex flex-col">
-          <div className='overflow-y-auto flex-1 bg-gradient-to-b from-white to-indigo-50 rounded-t-lg'>
+          <div className='overflow-y-auto flex-1 p-4 bg-gradient-to-b from-white to-indigo-50 rounded-t-lg'>
             <div className="space-y-3 m-4">
               {(isInitialLoad && messagesLoading) ? (
                 <div className="text-center text-gray-500 mt-8">
@@ -271,30 +293,13 @@ Focus: ${helper.focus}`;
                 </div>
               ) : (
                 <>
-                  {activeHelper && userProfile && (
-                    <div className="flex items-end justify-start opacity-90">
-                      <Avatar className="w-8 h-8 mr-2">
-                        <AvatarFallback className="bg-indigo-100 text-indigo-900 text-sm">
-                          {helperIcons[activeHelper.type] || '🤖'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="max-w-xs lg:max-w-md px-4 py-2 rounded-2xl bg-indigo-100 text-indigo-900 border border-indigo-200 shadow">
-                        <div className="text-xs font-semibold mb-1">
-                          {activeHelper.name}
-                        </div>
-                        <p className="text-sm">
-                          Hi {userProfile.name}! I'm {activeHelper.name}, your {activeHelper.type}. How can I support you today?
-                        </p>
-                      </div>
-                    </div>
-                  )}
                   {allMessages.map((msg: any) => (
                     <div
                       key={msg.id}
-                      className={`flex items-end ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} ${msg.optimistic ? 'opacity-70' : ''}`}
+                      className={`flex items-end gap-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} ${msg.optimistic ? 'opacity-70' : ''}`}
                     >
                       {msg.sender !== 'user' && (
-                        <Avatar className="w-8 h-8 mr-2">
+                        <Avatar className="w-8 h-8">
                           <AvatarFallback className="bg-indigo-100 text-indigo-900 text-sm">
                             {activeHelper ? (helperIcons[activeHelper.type] || '🤖') : '🤖'}
                           </AvatarFallback>
@@ -321,17 +326,21 @@ Focus: ${helper.focus}`;
                         </span>
                       </div>
                       {msg.sender === 'user' && (
-                        <Avatar className="w-8 h-8 ml-2">
-                          <AvatarFallback className="bg-indigo-600 text-white text-sm">
-                            {userProfile.name?.[0] || 'U'}
-                          </AvatarFallback>
+                        <Avatar className="w-8 h-8 ml-3">
+                          {avatarUrl ? (
+                            <AvatarImage src={avatarUrl} alt={userProfile.name || 'User'} />
+                          ) : (
+                            <AvatarFallback className="bg-indigo-600 text-white text-sm">
+                              {userProfile.name?.[0] || 'U'}
+                            </AvatarFallback>
+                          )}
                         </Avatar>
                       )}
                     </div>
                   ))}
                   {helperTyping && (
                     <div className="flex items-end justify-start">
-                      <Avatar className="w-8 h-8 mr-2">
+                      <Avatar className="w-8 h-8">
                         <AvatarFallback className="bg-indigo-100 text-indigo-900 text-sm">
                           {activeHelper ? (helperIcons[activeHelper.type] || '🤖') : '🤖'}
                         </AvatarFallback>
@@ -371,7 +380,7 @@ Focus: ${helper.focus}`;
               <Button onClick={handleSendMessage} size="icon" disabled={!message.trim()}>
                 <Send size={16} />
               </Button>
-              <Button variant="outline" size="icon">
+              <Button variant="outline" size="icon" onClick={handleMicClick}>
                 <Mic size={16} />
               </Button>
             </div>
@@ -417,6 +426,13 @@ Focus: ${helper.focus}`;
         isOpen={isVoiceCallOpen}
         onClose={() => setIsVoiceCallOpen(false)}
       />
+      {isVoiceDialogOpen && (
+        <VoiceRecordingDialog
+          isOpen={isVoiceDialogOpen}
+          onSend={handleSendRecording}
+          onClose={() => setIsVoiceDialogOpen(false)}
+        />
+      )}
     </div>
   );
 };
