@@ -45,7 +45,7 @@ export const HelperSelector = () => {
                 onClick={() => setHelperType(type)}
               >
                 <div className="font-medium">{type}</div>
-                <div className="text-sm opacity-80">{description}</div>
+                <div className="text-xs opacity-80">{description}</div>
               </Button>
             ))}
           </div>

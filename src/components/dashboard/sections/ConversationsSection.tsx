@@ -10,7 +10,11 @@ import { useAppContext } from '@/contexts/AppContext';
 export const ConversationsSection = () => {
   const { activeHelper, helpers, setActiveHelper } = useAppContext();
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState([
+    { id: 1, sender: 'helper', content: `Hi! I'm ${activeHelper?.name || 'your helper'}. How are you feeling today?`, time: '2:30 PM' },
+    { id: 2, sender: 'user', content: "I've been feeling overwhelmed with work lately.", time: '2:32 PM' },
+    { id: 3, sender: 'helper', content: "That sounds really challenging. Can you tell me more about what's making work feel overwhelming?", time: '2:33 PM' }
+  ]);
 
   const getHelperIcon = (type: string) => {
     const icons: Record<string, string> = {

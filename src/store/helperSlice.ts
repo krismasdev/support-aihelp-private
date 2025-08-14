@@ -31,10 +31,12 @@ export const fetchHelpers = createAsyncThunk(
   'helpers/fetchHelpers',
   async (userId: string, { rejectWithValue }) => {
     try {
+      console.log('Fetching helpers for user:', userId);
       const { data, error } = await supabase.functions.invoke('read-helpers', {
         body: { userId },
       });
 
+      console.log('Supabase response:', { data, error });
 
       if (error) {
         console.error('Supabase error:', error);
@@ -42,6 +44,7 @@ export const fetchHelpers = createAsyncThunk(
       }
 
       if (!data || !data.helpers) {
+        console.log('No helpers data received');
         return [];
       }
 
@@ -58,6 +61,7 @@ export const fetchHelpers = createAsyncThunk(
         isDefault: helper.is_default || false,
       }));
 
+      console.log('Mapped helpers:', mappedHelpers);
       return mappedHelpers;
     } catch (error: any) {
       console.error('Fetch helpers error:', error);

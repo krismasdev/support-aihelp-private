@@ -34,6 +34,42 @@ interface AppContextType {
   deleteHelper: (id: string) => void;
 }
 
+const defaultHelpers: Helper[] = [
+  {
+    id: '1',
+    name: 'Lisa Spillman',
+    type: 'Certified and Licensed therapist',
+    description: 'Certified and Licensed therapist',
+    tone: 'Gentle',
+    interactionStyle: 'meditative',
+    focus: 'mindfulness',
+    isDefault: true,
+    createdAt: new Date()
+  },
+  {
+    id: '2',
+    name: 'Selene Kepila',
+    type: 'Senior health coach',
+    description: 'Senior health coach',
+    tone: 'Encouraging',
+    interactionStyle: 'supportive',
+    focus: 'guidance',
+    isDefault: true,
+    createdAt: new Date()
+  },
+  {
+    id: '3',
+    name: 'Rene ',
+    type: 'Senior health coach',
+    description: 'Senior health coach',
+    tone: 'Gentle',
+    interactionStyle: 'supportive',
+    focus: 'listening',
+    isDefault: true,
+    createdAt: new Date()
+  }
+];
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const useAppContext = () => {
@@ -48,14 +84,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [helperType, setHelperType] = useState<HelperType>('Mentor');
   const [tonePreference, setTonePreference] = useState<TonePreference>('Gentle');
-  const [helpers, setHelpers] = useState<Helper[]>();
-  const [activeHelper, setActiveHelperState] = useState<Helper | null>();
+  const [helpers, setHelpers] = useState<Helper[]>(defaultHelpers);
+  const [activeHelper, setActiveHelperState] = useState<Helper | null>(defaultHelpers[0]);
 
   const toggleSidebar = () => {
     setSidebarOpen(prev => !prev);
   };
 
   const setActiveHelper = (helper: Helper) => {
+    console.log('AppContext: Setting active helper to:', helper.name, helper.id);
     setActiveHelperState(helper);
   };
 

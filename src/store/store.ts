@@ -5,6 +5,7 @@ import messagesReducer from './messagesSlice';
 // Load state from localStorage
 const loadState = () => {
   try {
+    if (typeof window === 'undefined') return undefined;
     const serializedState = localStorage.getItem('reduxState');
     if (serializedState === null) {
       return undefined;
@@ -19,6 +20,7 @@ const loadState = () => {
 // Save state to localStorage
 const saveState = (state: any) => {
   try {
+    if (typeof window === 'undefined') return;
     const serializedState = JSON.stringify(state);
     localStorage.setItem('reduxState', serializedState);
   } catch (err) {

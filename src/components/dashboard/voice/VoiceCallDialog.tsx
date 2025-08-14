@@ -62,7 +62,7 @@ export const VoiceCallDialog = ({ isOpen, onClose }: VoiceCallDialogProps) => {
   const renderHelperSelection = () => (
     <div className="space-y-4">
       <p className="text-gray-600 text-center">Choose who you'd like to have a voice call with:</p>
-      {/* <div className="grid gap-3">
+      <div className="grid gap-3">
         {helpers.map((helper) => (
           <Card 
             key={helper.id} 
@@ -95,7 +95,7 @@ export const VoiceCallDialog = ({ isOpen, onClose }: VoiceCallDialogProps) => {
             </CardContent>
           </Card>
         ))}
-      </div> */}
+      </div>
     </div>
   );
 

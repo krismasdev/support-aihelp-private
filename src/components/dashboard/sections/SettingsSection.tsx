@@ -365,10 +365,18 @@ export const SettingsSection = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button variant="outline" className="w-full justify-start">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => window.location.href = 'mailto:info@ensele.com?subject=Support Request'}
+            >
               Contact Support
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => window.location.href = 'mailto:info@ensele.com?subject=Feature Request - Suggestion for Improvement'}
+            >
               Suggest Improvements
             </Button>
           </CardContent>

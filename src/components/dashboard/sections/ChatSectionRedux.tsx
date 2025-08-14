@@ -12,7 +12,7 @@ import { selectUserId } from '@/store/userSlice';
 import { fetchHelpers, selectHelpers, selectDefaultHelper } from '@/store/helperSlice';
 import { fetchMessages, sendMessage, selectMessagesForHelper, selectMessagesLoading } from '@/store/messagesSlice';
 import { supabase } from '@/lib/supabase';
-import { VoiceRecordingDialog } from '../voice/VoiceRecordingDialog'; // <-- Replace RecordingModal import
+import { VoiceRecordingDialog } from '../voice/VoiceRecordingDialog';
 import { UserProfile } from '@/store/userSlice';
 
 interface ChatSectionProps {
@@ -53,13 +53,6 @@ export const ChatSectionRedux = ({ userProfile }: ChatSectionProps) => {
   const allMessages = [...currentMessages, ...optimisticMessages];
   const avatarUrl = useSelector((state: any) => state.user.profile?.avatar_url);
 
-  const buildSystemPrompt = (helper: any) => {
-    return `You are ${helper.name}, a ${helper.type}. 
-Description: ${helper.description}
-Tone: ${helper.tone}
-Interaction Style: ${helper.interactionStyle}
-Focus: ${helper.focus}`;
-  };
   // Sync context activeHelper with Redux defaultHelper
   useEffect(() => {
     if (defaultHelper && (!activeHelper || activeHelper.id !== defaultHelper.id)) {
@@ -74,13 +67,10 @@ Focus: ${helper.focus}`;
     }
   }, [activeHelper, userId, dispatch]);
 
-  const OPENAI_API_KEY = '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'; // Move to env in production
-
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [currentMessages, optimisticMessages, helperTyping]);
-
   const handleSendMessage = async () => {
     if (message.trim() && activeHelper && userId) {
       const tempId = `temp-${Date.now()}`;
@@ -100,7 +90,7 @@ Focus: ${helper.focus}`;
       setHelperTyping(true);
 
       try {
-        // 2. Save user message via edge function
+        // 2. Send message via edge function (handles both user message and AI response)
         const { error } = await supabase.functions.invoke('create-message', {
           body: {
             helper_id: activeHelper.id,
@@ -110,52 +100,13 @@ Focus: ${helper.focus}`;
           }
         });
 
-        // Do NOT remove optimistic message here!
-
-        // 3. Prepare messages for OpenAI
-        const chatHistory = [
-          {
-            role: 'system',
-            content: buildSystemPrompt(activeHelper),
-          },
-          ...currentMessages.map((msg: any) => ({
-            role: msg.sender === 'user' ? 'user' : 'assistant',
-            content: msg.message,
-          })),
-          { role: 'user', content: userMessageData.message }
-        ];
-
-        // 4. Call OpenAI API
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${OPENAI_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: chatHistory,
-            max_tokens: 3000,
-          }),
-        });
-
-        const data = await response.json();
-        const assistantReply = data.choices?.[0]?.message?.content?.trim();
-
-        if (assistantReply) {
-          // 5. Save assistant message via edge function
-          await supabase.functions.invoke('create-message', {
-            body: {
-              helper_id: activeHelper.id,
-              user_id: userId,
-              message: assistantReply,
-              sender: 'helper'
-            }
-          });
+        if (error) {
+          throw error;
         }
 
         setHelperTyping(false);
-        // Now refresh messages, which will replace the optimistic message with the real one
+        
+        // 3. Refresh messages to get both user and AI messages
         dispatch(fetchMessages({ helperId: activeHelper.id, userId }) as any);
 
         // Remove optimistic message after real messages are fetched
@@ -209,12 +160,9 @@ Focus: ${helper.focus}`;
     }
   }, []);
 
-  // Handle sending the audio blob (you can add speech-to-text here if needed)
+  // Handle sending the audio blob
   const handleSendRecording = async (audioBlob: Blob) => {
-    // Example: send audioBlob to your backend or convert to text
-    // For now, just close the dialog
     setIsVoiceDialogOpen(false);
-    // You can add speech-to-text conversion and message sending logic here
   };
 
   return (
@@ -275,7 +223,6 @@ Focus: ${helper.focus}`;
                   )}
                 </span>
                 <span className="text-md font-medium text-center leading-tight">{helper.name}</span>
-                {/* <span className="text-xs opacity-75">{helper.tone}</span> */}
               </Button>
             ))}
           </div>
@@ -387,7 +334,6 @@ Focus: ${helper.focus}`;
           </div>
         </CardContent>
       </Card>
-
 
       <div className="grid md:grid-cols-4 gap-4">
         <Button variant="outline" className="flex items-center gap-2 h-auto p-4">
