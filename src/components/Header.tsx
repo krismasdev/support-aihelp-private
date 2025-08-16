@@ -5,21 +5,9 @@ import { useAuth } from '@/hooks/useAuth';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
 
   const handleJoinClick = () => {
-    if (user) {
-      // User is already authenticated, go to dashboard
-      navigate('/dashboard');
-    } else {
-      // User is not authenticated, go to login/signup
-      navigate('/dashboard');
-    }
-  };
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
+    navigate('/dashboard');
   };
 
   return (
@@ -37,21 +25,12 @@ const Header: React.FC = () => {
 
           {/* Auth Buttons */}
           <div className="flex items-center space-x-4">
-            {user ? (
-              <Button 
-                variant="outline"
-                onClick={handleSignOut}
-              >
-                Sign Out
-              </Button>
-            ) : (
-              <Button 
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-semibold transition-colors duration-200"
-                onClick={handleJoinClick}
-              >
-                Join for Free
-              </Button>
-            )}
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-semibold transition-colors duration-200"
+              onClick={handleJoinClick}
+            >
+              Join for Free
+            </Button>
           </div>
         </div>
       </div>
