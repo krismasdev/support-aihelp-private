@@ -46,6 +46,7 @@ export const VoiceRecordingDialog = ({ isOpen, onClose, onSendRecording }: Voice
       mediaRecorder.ondataavailable = (event) => chunks.push(event.data);
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: 'audio/webm' });
+        console.log(blob);
         setAudioBlob(blob);
       };
       

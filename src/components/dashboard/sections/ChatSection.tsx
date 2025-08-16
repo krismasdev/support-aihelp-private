@@ -1,44 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Send, Mic, Pause, BookOpen, Phone, Wrench, Package, Loader2 } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Send, Mic, Phone, Loader2, Pause, BookOpen, Wrench, Package } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { VoiceCallDialog } from '../voice/VoiceCallDialog';
 import { selectUserId } from '@/store/userSlice';
 import { fetchHelpers, selectHelpers, selectDefaultHelper } from '@/store/helperSlice';
+import { fetchMessages, sendMessage, selectMessagesForHelper, selectMessagesLoading } from '@/store/messagesSlice';
 import { supabase } from '@/lib/supabase';
-
-interface UserProfile {
-  name: string;
-  age: number;
-  location: string;
-  goals: string[];
-  challenges: string[];
-}
+import { VoiceRecordingDialog } from '../voice/VoiceRecordingDialog';
+import { UserProfile } from '@/pages/Dashboard';
+import { HelperSwitcher } from './ChatSection/HelperSwitcher';
+import { MessageList } from './ChatSection/MessageList';
+import { MessageInput } from './ChatSection/MessageInput';
+import { ChatActions } from './ChatSection/ChatActions';
 
 interface ChatSectionProps {
   userProfile: UserProfile;
 }
-
-interface Message {
-  id: number;
-  sender: 'user' | 'helper';
-  content: string;
-  time: string;
-  helperId: string;
-}
-
-const empathicAnchors = [
-  "It sounds like you're feeling",
-  "I can hear that this has been tough for you",
-  "That makes a lot of sense. Thanks for sharing that",
-  "I'm here with you through this",
-  "It seems like this has been weighing on you"
-];
 
 const helperIcons: Record<string, string> = {
   'Spiritual Guide': '🙏',
@@ -49,133 +32,102 @@ const helperIcons: Record<string, string> = {
   'Health Consultant': '🏥'
 };
 
-const helperResponses = {
-  'Spiritual Guide': [
-    "Let's take a moment to breathe together and find your center.",
-    "What does your inner wisdom tell you about this situation?",
-    "Sometimes the universe presents challenges to help us grow.",
-    "Have you tried meditation or mindfulness practices for this?"
-  ],
-  'Relationship Coach': [
-    "Communication is key in any relationship. How have you expressed this?",
-    "What patterns do you notice in your relationships?",
-    "It's important to set healthy boundaries. How does that feel?",
-    "Love starts with self-compassion. How are you treating yourself?"
-  ],
-  'Mental Wellness Helper': [
-    "Your feelings are completely valid. Thank you for sharing.",
-    "What coping strategies have helped you in the past?",
-    "It's okay to not be okay. You're taking the right steps.",
-    "How has your sleep and self-care been lately?"
-  ],
-  'Career Coach': [
-    "Let's break this down into actionable steps you can take.",
-    "What skills do you want to develop to reach your goals?",
-    "Every challenge is an opportunity for professional growth.",
-    "What would success look like for you in this situation?"
-  ],
-  'Friend & Advisor': [
-    "I'm here for you, no matter what. What's really going on?",
-    "You know I've got your back. What do you need right now?",
-    "That sounds really tough. Want to talk through it?",
-    "You're stronger than you think. I believe in you."
-  ],
-  'Health Consultant': [
-    "Your physical and mental health are interconnected. How are you feeling?",
-    "What does your daily routine look like right now?",
-    "Small, consistent changes can make a big difference.",
-    "Have you considered how stress might be affecting your body?"
-  ]
-};
-
 export const ChatSection = ({ userProfile }: ChatSectionProps) => {
   const dispatch = useDispatch();
   const userId = useSelector(selectUserId);
   const helpers = useSelector(selectHelpers);
   const defaultHelper = useSelector(selectDefaultHelper);
+  const messagesLoading = useSelector(selectMessagesLoading);
 
   const { activeHelper, setActiveHelper } = useAppContext();
 
   const [message, setMessage] = useState('');
-  const [allMessages, setAllMessages] = useState<Record<string, Message[]>>({});
-  const [isInitialized, setIsInitialized] = useState(false);
   const [isVoiceCallOpen, setIsVoiceCallOpen] = useState(false);
   const [selectingHelperId, setSelectingHelperId] = useState<string | null>(null);
+  const [helperTyping, setHelperTyping] = useState(false);
+  const [optimisticMessages, setOptimisticMessages] = useState<any[]>([]);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isVoiceDialogOpen, setIsVoiceDialogOpen] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Sync context activeHelper with Redux defaultHelper after helpers are loaded
+  const currentMessages = useSelector((state: any) =>
+    activeHelper ? selectMessagesForHelper(state, activeHelper.id) : []
+  );
+
+  const allMessages = [
+    ...currentMessages,
+    ...optimisticMessages.filter(msg => msg.helper_id === activeHelper?.id)
+  ];
+  const avatarUrl = useSelector((state: any) => state.user.profile?.avatar_url);
+
+  // Fetch messages when activeHelper changes
   useEffect(() => {
-    if (defaultHelper && (!activeHelper || activeHelper.id !== defaultHelper.id)) {
-      setActiveHelper(defaultHelper);
+    if (activeHelper && userId) {
+      dispatch(fetchMessages({ helperId: activeHelper.id, userId }) as any);
     }
-  }, [defaultHelper, activeHelper, setActiveHelper]);
+  }, [activeHelper, userId, dispatch]);
 
+  // Scroll to bottom when messages change
   useEffect(() => {
-    if (!isInitialized && helpers.length > 0) {
-      const initialMessages: Record<string, Message[]> = {};
-      helpers.forEach(helper => {
-        initialMessages[helper.id] = [{
-          id: Date.now() + Math.random(),
-          sender: 'helper',
-          content: `Hi ${userProfile.name}! I'm ${helper.name}, your ${helper.type}. How can I support you today?`,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          helperId: helper.id
-        }];
-      });
-      setAllMessages(initialMessages);
-      setIsInitialized(true);
-    }
-  }, [helpers, userProfile.name, isInitialized]);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [currentMessages, optimisticMessages, helperTyping]);
 
-  const currentMessages = activeHelper ? (allMessages[activeHelper.id] || []) : [];
-
-  const generateHelperResponse = (userMessage: string, helper: any) => {
-    const anchor = empathicAnchors[Math.floor(Math.random() * empathicAnchors.length)];
-    const responses = helperResponses[helper.type as keyof typeof helperResponses] || [
-      "I'm here to help you work through this."
-    ];
-    const response = responses[Math.floor(Math.random() * responses.length)];
-    return `${anchor}... ${response}`;
-  };
-
-  const sendMessage = () => {
-    if (message.trim() && activeHelper) {
-      const newMessage: Message = {
-        id: Date.now(),
+  const handleSendMessage = async () => {
+    if (message.trim() && activeHelper && userId) {
+      const tempId = `temp-${Date.now()}`;
+      const userMessageData = {
+        id: tempId,
+        helper_id: activeHelper.id,
+        user_id: userId,
+        message: message.trim(),
         sender: 'user',
-        content: message,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        helperId: activeHelper.id
+        is_audio: false,
+        audio_url: null,
+        created_at: new Date().toISOString(),
       };
-      
-      setAllMessages(prev => ({
-        ...prev,
-        [activeHelper.id]: [...(prev[activeHelper.id] || []), newMessage]
-      }));
-      
-      const userMsg = message;
+
+      setOptimisticMessages((prev) => [...prev, userMessageData]);
       setMessage('');
-      
-      setTimeout(() => {
-        const helperResponse: Message = {
-          id: Date.now() + 1,
-          sender: 'helper',
-          content: generateHelperResponse(userMsg, activeHelper),
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          helperId: activeHelper.id
-        };
+      setHelperTyping(true);
+
+      try {
+
+        const { data: { aiMessage }, error } = await supabase.functions.invoke(
+          "create-text-message", {
+          body: { helper: activeHelper, user_id: userId, userMessageData: userMessageData, currentMessages: currentMessages }
+        });
         
-        setAllMessages(prev => ({
-          ...prev,
-          [activeHelper.id]: [...(prev[activeHelper.id] || []), helperResponse]
-        }));
-      }, 1000);
+        // 5. Add AI response to chat
+        const aiMessageData = {
+          helper_id: activeHelper.id,
+          user_id: userId,
+          message: aiMessage,
+          sender: "helper",
+          is_audio: false,
+          audio_url: null,
+          created_at: new Date().toISOString(),
+        };
+        setOptimisticMessages((prev) => [
+          ...prev.filter((msg) => msg.id !== tempId),
+          userMessageData,
+          aiMessageData,
+        ]);
+        setHelperTyping(false);
+
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      } catch (error) {
+        setHelperTyping(false);
+        setOptimisticMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+        console.error('Error sending message:', error);
+      }
     }
   };
 
   const handleHelperSwitch = async (helper: any) => {
-    if (!userId || selectingHelperId) return;
+    if (!userId) return;
     setSelectingHelperId(helper.id);
-    
     try {
       await supabase.functions.invoke('set-default-helper', {
         body: {
@@ -184,28 +136,130 @@ export const ChatSection = ({ userProfile }: ChatSectionProps) => {
         }
       });
       setActiveHelper(helper);
+      dispatch(fetchHelpers(userId) as any);
     } catch (error) {
       console.error('Error setting default helper:', error);
     } finally {
       setSelectingHelperId(null);
     }
+  };
 
-    if (!allMessages[helper.id]) {
-      setAllMessages(prev => ({
-        ...prev,
-        [helper.id]: [{
-          id: Date.now() + Math.random(),
-          sender: 'helper',
-          content: `Hi ${userProfile.name}! I'm ${helper.name}, your ${helper.type}. How can I support you today?`,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          helperId: helper.id
-        }]
-      }));
+  // Detect initial load
+  useEffect(() => {
+    if (!messagesLoading && isInitialLoad) {
+      setIsInitialLoad(false);
+    }
+  }, [messagesLoading, isInitialLoad]);
+
+  // Auto-select default helper when available
+  useEffect(() => {
+    if (defaultHelper && (!activeHelper || activeHelper.id !== defaultHelper.id)) {
+      console.log('Auto-selecting default helper:', defaultHelper.name);
+      setActiveHelper(defaultHelper);
+    }
+  }, [defaultHelper, activeHelper, setActiveHelper]);
+
+  // Microphone check and open dialog
+  const handleMicClick = useCallback(async () => {
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      setIsVoiceDialogOpen(true);
+    } catch (err) {
+      alert('Please connect your microphone.');
+    }
+  }, []);
+
+  // Handle sending the audio blob
+  const handleSendRecording = async (audioBlob: Blob) => {
+    console.log("111111111", audioBlob);
+    if (!activeHelper || !userId) return;
+    setIsVoiceDialogOpen(false);
+    setHelperTyping(true);
+
+    // 1. Optimistically add audio message (pending, no audio_url yet)
+    const tempId = `audio-temp-${Date.now()}`;
+    const optimisticAudioMsg = {
+      id: tempId,
+      helper_id: activeHelper.id,
+      user_id: userId,
+      message: '',
+      is_audio: true,
+      audio_url: '', // will be set after upload
+      sender: 'user',
+      created_at: new Date().toISOString(),
+      pending: true,
+      transcribedText: '',
+    };
+    setOptimisticMessages((prev) => [...prev, optimisticAudioMsg]);
+
+    try {
+      // 2. Upload audio to Supabase Storage
+      const fileName = `audio_${userId}_${Date.now()}.webm`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('audio_messages')
+        .upload(fileName, audioBlob, { contentType: 'audio/webm' });
+      if (uploadError) throw uploadError;
+
+      // 3. Get public URL for audio
+      const { data: publicUrlData } = supabase
+        .storage
+        .from('audio_messages')
+        .getPublicUrl(fileName);
+      const audioUrl = publicUrlData.publicUrl;
+
+      // 4. Update optimistic message with audio_url so play button works immediately
+      setOptimisticMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === tempId ? { ...msg, audio_url: audioUrl } : msg
+        )
+      );
+      
+      const { data : { transcribedText, aiMessage }, error } = await supabase.functions.invoke("create-audio-message", { 
+        body: {
+          helper: activeHelper, 
+          user_id: userId, 
+          is_audio: true, 
+          audio_url: audioUrl, 
+          sender: "user",
+          fileName: fileName
+        } 
+      });
+
+      // 11. Update optimistic message: remove pending, set transcribedText
+      setOptimisticMessages((prev) =>
+        prev
+          .filter((msg) => msg.id !== tempId)
+          .concat([
+            {
+              ...optimisticAudioMsg,
+              id: tempId,
+              audio_url: audioUrl,
+              pending: false,
+              transcribedText,
+            },
+            {
+              id: `ai-${Date.now()}`,
+              helper_id: activeHelper.id,
+              user_id: userId,
+              message: aiMessage,
+              sender: 'helper',
+              is_audio: false,
+              audio_url: null,
+              created_at: new Date().toISOString(),
+            },
+          ])
+      );
+      setHelperTyping(false);
+    } catch (error) {
+      setHelperTyping(false);
+      setOptimisticMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+      console.error('Error handling audio message:', error);
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 h-full flex flex-col">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold text-indigo-900 mb-2">
@@ -224,141 +278,59 @@ export const ChatSection = ({ userProfile }: ChatSectionProps) => {
             )}
           </div>
         </div>
-        <Button 
+        <Button
           onClick={() => setIsVoiceCallOpen(true)}
           className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700"
         >
           <Phone size={16} />
-          Start Voice Call ($1/min)
+          Start Voice Call
         </Button>
       </div>
 
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-indigo-200">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <h3 className="font-medium text-indigo-900">Quick Switch Helper:</h3>
-            <Badge variant="secondary" className="text-xs">
-              {helpers.length} available
-            </Badge>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {helpers.map((helper) => (
-              <Button
-                key={helper.id}
-                onClick={() => handleHelperSwitch(helper)}
-                disabled={!!selectingHelperId}
-                className="justify-center whitespace-nowrap text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 rounded-md px-3 flex items-center gap-1 transition-all bg-indigo-600 text-white hover:bg-indigo-700 shadow-md"
-              >
-                <span>
-                  {selectingHelperId === helper.id ? (
-                    <Loader2 className="animate-spin w-4 h-4" />
-                  ) : (
-                    helperIcons[helper.type] || '🤖'
-                  )}
-                </span>
-                <span>{helper.name}</span>
-              </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="h-80">
-        <CardContent className="p-0 h-full flex flex-col">
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {currentMessages.length === 0 ? (
-              <div className="text-center text-gray-500 mt-8">
-                <p>No messages yet. Start a conversation!</p>
-              </div>
-            ) : (
-              currentMessages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                   <div className={`flex items-start gap-3 max-w-xs lg:max-w-md ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}>
-                     {msg.sender === 'helper' && activeHelper && (
-                       <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-lg">
-                         {helperIcons[activeHelper.type] || '🤖'}
-                       </div>
-                     )}
-                     {msg.sender === 'user' && (
-                       <Avatar className="w-8 h-8">
-                         <AvatarFallback className="bg-blue-100 text-blue-900 text-sm">
-                           {userProfile.name.charAt(0).toUpperCase()}
-                         </AvatarFallback>
-                       </Avatar>
-                     )}
-                     <div className={`rounded-lg p-3 ${
-                       msg.sender === 'user' 
-                         ? 'bg-indigo-600 text-white' 
-                         : 'bg-gray-100 text-gray-900'
-                     }`}>
-                       <p className="text-sm">{msg.content}</p>
-                       <p className={`text-xs mt-1 ${
-                         msg.sender === 'user' ? 'text-indigo-200' : 'text-gray-500'
-                       }`}>{msg.time}</p>
-                     </div>
-                </div>
-              ))
-            )}
-          </div>
-          
-          <div className="border-t p-4">
-            <div className="flex gap-2">
-              <Input
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder={`Type your message to ${activeHelper?.name || 'your helper'}...`}
-                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                className="flex-1"
-              />
-              <Button onClick={sendMessage} size="icon" disabled={!message.trim()}>
-                <Send size={16} />
-              </Button>
-              <Button variant="outline" size="icon">
-                <Mic size={16} />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid md:grid-cols-4 gap-4">
-        <Button variant="outline" className="flex items-center gap-2 h-auto p-4">
-          <Pause size={16} />
-          <div className="text-left">
-            <p className="font-medium">Pause & Reflect</p>
-            <p className="text-xs text-gray-500">Take a moment</p>
-          </div>
-        </Button>
-        
-        <Button variant="outline" className="flex items-center gap-2 h-auto p-4">
-          <BookOpen size={16} />
-          <div className="text-left">
-            <p className="font-medium">Save to Journal</p>
-            <p className="text-xs text-gray-500">Keep this conversation</p>
-          </div>
-        </Button>
-        
-        <Button variant="outline" className="flex items-center gap-2 h-auto p-4">
-          <Wrench size={16} />
-          <div className="text-left">
-            <p className="font-medium">Use a Tool</p>
-            <p className="text-xs text-gray-500">Quick exercises</p>
-          </div>
-        </Button>
-        
-        <Button variant="outline" className="flex items-center gap-2 h-auto p-4">
-          <Package size={16} />
-          <div className="text-left">
-            <p className="font-medium">Life Resources</p>
-            <p className="text-xs text-gray-500">Helpful content</p>
-          </div>
-        </Button>
-      </div>
-
-      <VoiceCallDialog 
-        isOpen={isVoiceCallOpen} 
-        onClose={() => setIsVoiceCallOpen(false)} 
+      {/* Helper Switcher */}
+      <HelperSwitcher
+        helpers={helpers}
+        activeHelper={activeHelper}
+        onSwitch={handleHelperSwitch}
+        selectingHelperId={selectingHelperId}
+        helperIcons={helperIcons}
       />
+
+      {/* Message List */}
+      <MessageList
+        allMessages={allMessages}
+        helperTyping={helperTyping}
+        activeHelper={activeHelper}
+        userProfile={userProfile}
+        avatarUrl={avatarUrl}
+        messagesEndRef={messagesEndRef}
+        helperIcons={helperIcons}
+      />
+
+      {/* Message Input */}
+      <MessageInput
+        message={message}
+        setMessage={setMessage}
+        onSend={handleSendMessage}
+        onMicClick={handleMicClick}
+        activeHelper={activeHelper}
+      />
+
+      {/* Chat Actions */}
+      <ChatActions />
+
+      {/* Voice dialogs */}
+      <VoiceCallDialog
+        isOpen={isVoiceCallOpen}
+        onClose={() => setIsVoiceCallOpen(false)}
+      />
+      {isVoiceDialogOpen && (
+        <VoiceRecordingDialog
+          isOpen={isVoiceDialogOpen}
+          onSendRecording={handleSendRecording} // <-- FIXED PROP NAME
+          onClose={() => setIsVoiceDialogOpen(false)}
+        />
+      )}
     </div>
   );
 };

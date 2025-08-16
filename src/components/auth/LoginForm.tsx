@@ -41,6 +41,19 @@ export const LoginForm = ({ onLogin }: LoginFormProps) => {
         // Check if user needs to confirm email
         if (data.user && !data.session) {
           setEmailSent(true);
+          // Add default helpers for new user
+          try {
+            const { data: helpersData, error: helpersError } = await supabase.functions.invoke('add-helpers', {
+              body: { user_id: data.user.id }
+            });
+            if (helpersError) {
+              console.error('Error adding default helpers:', helpersError);
+            } else {
+              console.log('Default helpers added successfully:', helpersData);
+            }
+          } catch (err) {
+            console.error('Failed to add default helpers:', err);
+          }
         } else if (data.user && data.session) {
           dispatch(fetchUserProfile(data.user.id));
           dispatch(fetchHelpers(data.user.id) as any);

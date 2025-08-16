@@ -2,7 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, MessageCircle, Loader2 } from 'lucide-react';
+import { Edit, Trash2, MessageCircle, Loader2, Clock, DollarSign } from 'lucide-react';
 import type { Helper } from '@/contexts/AppContext';
 
 interface HelperCardProps {

@@ -161,6 +161,9 @@ export const SettingsSection = () => {
     }
   };
 
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const isDeleteEnabled = deleteConfirmText === 'DELETE My Account';
+
   const handleDeleteAccount = async () => {
     try {
       if (!userProfile.id) {
@@ -346,9 +349,27 @@ export const SettingsSection = () => {
                     and remove all your data from our servers.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
+                <div className="py-4">
+                  <Label htmlFor="delete-confirm">
+                    Type <strong>DELETE My Account</strong> to confirm:
+                  </Label>
+                  <Input
+                    id="delete-confirm"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder="Type DELETE My Account here"
+                    className="mt-2"
+                  />
+                </div>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteAccount}>
+                  <AlertDialogCancel onClick={() => setDeleteConfirmText('')}>
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={handleDeleteAccount}
+                    disabled={!isDeleteEnabled}
+                    className={!isDeleteEnabled ? 'opacity-50 cursor-not-allowed' : ''}
+                  >
                     Delete Account
                   </AlertDialogAction>
                 </AlertDialogFooter>

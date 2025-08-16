@@ -19,6 +19,10 @@ export const useAuth = () => {
       setUser(authData.user as any);
       setLoading(false);
       return;
+    } else if (authData.token) {
+      // Token exists but expired, clear it
+      removeAuthData();
+      setUser(null);
     }
 
     // Get initial session from Supabase
@@ -85,15 +89,18 @@ export const useAuth = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [authData]);
 
   const signOut = async () => {
+    setLoading(true);
     await supabase.auth.signOut();
     removeAuthData();
+    setUser(null);
+    setLoading(false);
   };
 
   const isAuthenticated = () => {
-    return !!(authData.token && authData.expiresAt && Date.now() < authData.expiresAt);
+    return !!(user && authData.token && authData.expiresAt && Date.now() < authData.expiresAt);
   };
 
   return {

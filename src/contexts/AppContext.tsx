@@ -1,21 +1,20 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
+import { images } from '../assets/images';
 
 export type HelperType = 'Friend' | 'Mentor' | 'Coach' | 'Therapist';
 export type TonePreference = 'Gentle' | 'Direct' | 'Encouraging';
 
 export interface Helper {
-  id: string;
+  calendar_id: string;
+  calendar_url: string;
   name: string;
   type: string;
   description: string;
-  tone: TonePreference;
-  interactionStyle: string;
-  focus: string;
-  isDefault: boolean;
-  createdAt: Date;
+  avatar: string;  
+  minutes: number;
 }
 
 interface AppContextType {
@@ -29,46 +28,7 @@ interface AppContextType {
   helpers: Helper[];
   activeHelper: Helper | null;
   setActiveHelper: (helper: Helper) => void;
-  addHelper: (helper: Omit<Helper, 'id' | 'createdAt' | 'isDefault'>) => void;
-  updateHelper: (id: string, updates: Partial<Helper>) => void;
-  deleteHelper: (id: string) => void;
 }
-
-const defaultHelpers: Helper[] = [
-  {
-    id: '1',
-    name: 'Lisa Spillman',
-    type: 'Certified and Licensed therapist',
-    description: 'Certified and Licensed therapist',
-    tone: 'Gentle',
-    interactionStyle: 'meditative',
-    focus: 'mindfulness',
-    isDefault: true,
-    createdAt: new Date()
-  },
-  {
-    id: '2',
-    name: 'Selene Kepila',
-    type: 'Senior health coach',
-    description: 'Senior health coach',
-    tone: 'Encouraging',
-    interactionStyle: 'supportive',
-    focus: 'guidance',
-    isDefault: true,
-    createdAt: new Date()
-  },
-  {
-    id: '3',
-    name: 'Rene ',
-    type: 'Senior health coach',
-    description: 'Senior health coach',
-    tone: 'Gentle',
-    interactionStyle: 'supportive',
-    focus: 'listening',
-    isDefault: true,
-    createdAt: new Date()
-  }
-];
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -80,119 +40,69 @@ export const useAppContext = () => {
   return context;
 };
 
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [helperType, setHelperType] = useState<HelperType>('Mentor');
   const [tonePreference, setTonePreference] = useState<TonePreference>('Gentle');
-  const [helpers, setHelpers] = useState<Helper[]>(defaultHelpers);
-  const [activeHelper, setActiveHelperState] = useState<Helper | null>(defaultHelpers[0]);
+  const [helpers, setHelpers] = useState<Helper[]>([]);
+  const [activeHelper, setActiveHelperState] = useState<Helper | null>(null);
+
+  // Fetch staff data from Supabase on component mount
+  useEffect(() => {
+    const fetchStaffData = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-staff-list');
+        console.log(data);
+        if (error) {
+          console.error('Error fetching staff:', error);
+          toast({ title: 'Failed to load staff data', variant: 'destructive' });
+          // Fallback to default helpers if API fails
+          setHelpers(defaultHelpers);
+          setActiveHelperState(defaultHelpers[0]);
+          return;
+        }
+
+        if (data?.staff && data.staff.length > 0) {
+          setHelpers(data.staff);
+          setActiveHelperState(data.staff[0]);
+        } else {
+          // Fallback to default helpers if no staff data
+          setHelpers(defaultHelpers);
+          setActiveHelperState(defaultHelpers[0]);
+        }
+      } catch (error) {
+        console.error('Error fetching staff:', error);
+        toast({ title: 'Failed to load staff data', variant: 'destructive' });
+        // Fallback to default helpers
+        setHelpers(defaultHelpers);
+        setActiveHelperState(defaultHelpers[0]);
+      }
+    };
+
+    fetchStaffData();
+  }, []);
 
   const toggleSidebar = () => {
     setSidebarOpen(prev => !prev);
   };
 
   const setActiveHelper = (helper: Helper) => {
-    console.log('AppContext: Setting active helper to:', helper.name, helper.id);
+    console.log('AppContext: Setting active helper to:', helper.name);
     setActiveHelperState(helper);
-  };
-
-  const addHelper = async (helperData: Omit<Helper, 'id' | 'createdAt' | 'isDefault'>) => {
-    try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({ title: 'Please log in to create a helper', variant: 'destructive' });
-        return;
-      }
-
-      // Call the create-helper edge function
-      const { data, error } = await supabase.functions.invoke('create-helper', {
-        body: {
-          name: helperData.name,
-          type: helperData.type,
-          description: helperData.description,
-          tone: helperData.tone,
-          interactionStyle: helperData.interactionStyle,
-          focus: helperData.focus,
-          userId: user.id
-        }
-      });
-
-      if (error) {
-        console.error('Error creating helper:', error);
-        toast({ title: 'Failed to create helper', variant: 'destructive' });
-        return;
-      }
-
-      if (data?.success && data?.helper) {
-        // Convert the database response to our Helper format
-        const newHelper: Helper = {
-          id: data.helper.id,
-          name: data.helper.name,
-          type: data.helper.type,
-          description: data.helper.description || '',
-          tone: data.helper.tone as TonePreference,
-          interactionStyle: data.helper.interaction_style,
-          focus: data.helper.focus,
-          isDefault: data.helper.is_default || false,
-          createdAt: new Date(data.helper.created_at)
-        };
-
-        setHelpers(prev => [...prev, newHelper]);
-        toast({ title: 'Helper created successfully!' });
-      } else {
-        toast({ title: 'Failed to create helper', variant: 'destructive' });
-      }
-    } catch (error) {
-      console.error('Error creating helper:', error);
-      toast({ title: 'Failed to create helper', variant: 'destructive' });
-    }
-  };
-
-  const updateHelper = (id: string, updates: Partial<Helper>) => {
-    setHelpers(prev => prev.map(helper => 
-      helper.id === id ? { ...helper, ...updates } : helper
-    ));
-    if (activeHelper?.id === id) {
-      setActiveHelperState(prev => prev ? { ...prev, ...updates } : null);
-    }
-    toast({ title: 'Helper updated successfully!' });
-  };
-
-  const deleteHelper = (id: string) => {
-    const helper = helpers.find(h => h.id === id);
-    if (helper?.isDefault) {
-      toast({ title: 'Cannot delete default helpers', variant: 'destructive' });
-      return;
-    }
-    setHelpers(prev => prev.filter(helper => helper.id !== id));
-    if (activeHelper?.id === id) {
-      setActiveHelperState(helpers[0]);
-    }
-    toast({ title: 'Helper deleted successfully!' });
   };
 
   const getAIPersonality = () => {
     if (!activeHelper) return '';
     
     const helperBehaviors = {
-      'Spiritual Guide': 'Provide spiritual guidance with wisdom and compassion',
-      'Relationship Coach': 'Offer relationship advice with empathy and understanding',
-      'Mental Wellness Helper': 'Support mental health with gentle, non-judgmental care',
-      'Career Coach': 'Guide professional development with practical insights',
-      'Friend & Advisor': 'Be a supportive friend offering casual advice',
-      'Health Consultant': 'Provide wellness guidance with health-focused insights'
-    };
-
-    const toneStyles = {
-      Gentle: 'Use soft phrasing. Avoid abrupt or overly direct suggestions.',
-      Direct: 'Be clear, respectful, and concise. Get to the point without sounding harsh.',
-      Encouraging: 'Use positive, uplifting language and affirm the user\'s efforts.'
+      'Coaching': 'Provide coaching guidance with empathy and understanding',
+      'Therapy': 'Support mental health with gentle, non-judgmental care',
+      'Mentoring': 'Guide personal development with practical insights'
     };
 
     const behavior = helperBehaviors[activeHelper.type as keyof typeof helperBehaviors] || `Act as a ${activeHelper.type} helper`;
     
-    return `You are ${activeHelper.name}, a ${activeHelper.type}. ${behavior} Your interaction style is ${activeHelper.interactionStyle} and you focus on ${activeHelper.focus}. Tone: ${activeHelper.tone} - ${toneStyles[activeHelper.tone]} Always begin responses with empathetic anchors like "It sounds like you're feeling..." or "I can hear that this has been tough for you..." Maintain consistency throughout the session.`;
+    return `You are ${activeHelper.name}, a ${activeHelper.type} professional. ${behavior} Always begin responses with empathetic anchors like "It sounds like you're feeling..." or "I can hear that this has been tough for you..." Maintain consistency throughout the session.`;
   };
 
   return (
@@ -207,10 +117,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         getAIPersonality,
         helpers,
         activeHelper,
-        setActiveHelper,
-        addHelper,
-        updateHelper,
-        deleteHelper
+        setActiveHelper
       }}
     >
       {children}

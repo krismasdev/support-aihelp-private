@@ -1,9 +1,26 @@
 import React from 'react';
 import { Button } from './ui/button';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+
+  const handleJoinClick = () => {
+    if (user) {
+      // User is already authenticated, go to dashboard
+      navigate('/dashboard');
+    } else {
+      // User is not authenticated, go to login/signup
+      navigate('/dashboard');
+    }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
@@ -18,14 +35,23 @@ const Header: React.FC = () => {
             </div>
           </div>
 
-          {/* Join for Free Button */}
-          <div className="flex items-center">
-            <Button 
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-semibold transition-colors duration-200"
-              onClick={() => navigate('/dashboard')}
-            >
-              Join for Free
-            </Button>
+          {/* Auth Buttons */}
+          <div className="flex items-center space-x-4">
+            {user ? (
+              <Button 
+                variant="outline"
+                onClick={handleSignOut}
+              >
+                Sign Out
+              </Button>
+            ) : (
+              <Button 
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-semibold transition-colors duration-200"
+                onClick={handleJoinClick}
+              >
+                Join for Free
+              </Button>
+            )}
           </div>
         </div>
       </div>
