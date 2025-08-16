@@ -55,7 +55,7 @@ export const useAuth = () => {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state change:', event, session?.user?.email);
       
       if (session?.user) {
@@ -78,9 +78,24 @@ export const useAuth = () => {
         setUser(session.user);
         
         // If this is an email confirmation, redirect to dashboard
-        if (event === 'SIGNED_IN' && window.location.pathname !== '/dashboard') {
-          window.location.href = '/dashboard';
+        if (event === 'SIGNED_IN') {
+          const { data, error } = await supabase.functions.invoke("get-user-role", 
+            {
+              body: {
+                userId: session.user.id
+              }
+            });
+          console.log(data.data.role);
+          if (data.data.role === "admin") {
+            window.location.href = "/admin";
+          }
+          // else if(data.data.role === "user") {
+          //   window.location.href = "./dashboard";
+          // }
         }
+        //  && window.location.pathname !== '/dashboard') {
+        //   window.location.href = '/dashboard';
+        // }
       } else {
         removeAuthData();
         setUser(null);
@@ -97,6 +112,8 @@ export const useAuth = () => {
     removeAuthData();
     setUser(null);
     setLoading(false);
+    // Redirect to home page after sign out
+    window.location.href = '/';
   };
 
   const isAuthenticated = () => {

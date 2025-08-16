@@ -10,7 +10,7 @@ import { fetchUserProfile } from '@/store/profileActions';
 import { fetchHelpers } from '@/store/helperSlice';
 
 interface LoginFormProps {
-  onLogin: (isNewUser: boolean, isDemoMode?: boolean) => void;
+  onLogin: (isNewUser: boolean) => void;
 }
 
 export const LoginForm = ({ onLogin }: LoginFormProps) => {
@@ -57,7 +57,7 @@ export const LoginForm = ({ onLogin }: LoginFormProps) => {
         } else if (data.user && data.session) {
           dispatch(fetchUserProfile(data.user.id));
           dispatch(fetchHelpers(data.user.id) as any);
-          onLogin(true, false);
+          onLogin(true);
         }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -68,7 +68,7 @@ export const LoginForm = ({ onLogin }: LoginFormProps) => {
         if (data.user) {
           dispatch(fetchUserProfile(data.user.id));
           dispatch(fetchHelpers(data.user.id) as any);
-          onLogin(false, false);
+          onLogin(false);
         }
       }
     } catch (error: any) {
@@ -78,9 +78,7 @@ export const LoginForm = ({ onLogin }: LoginFormProps) => {
     }
   };
 
-  const handleDemo = () => {
-    onLogin(true, true);
-  };
+
 
   if (emailSent) {
     return (
@@ -157,15 +155,6 @@ export const LoginForm = ({ onLogin }: LoginFormProps) => {
           </form>
           <Separator className="my-4" />
           
-          <div className="space-y-3">
-            <Button 
-              variant="outline" 
-              onClick={handleDemo}
-              className="w-full"
-            >
-              Try Demo
-            </Button>
-            
             <div className="text-center">
               <button
                 type="button"
@@ -178,7 +167,6 @@ export const LoginForm = ({ onLogin }: LoginFormProps) => {
                 }
               </button>
             </div>
-          </div>
         </CardContent>
       </Card>
     </div>

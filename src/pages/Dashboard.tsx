@@ -1,38 +1,35 @@
 import { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardContent } from '@/components/dashboard/DashboardContent';
-import { IntakeForm } from '@/components/dashboard/IntakeForm';
-import { LoginForm } from '@/components/auth/LoginForm';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { setProfile } from '@/store/userSlice';
+
 export type DashboardSection = 'home' | 'helper' | 'insights' | 'tools' | 'resources' | 'settings';
 
 export interface UserProfile {
   name: string;
   age: number;
-  pronouns: number; // 1 = They/Them, 2 = She/Her, 3 = He/Him
+  pronouns: number;
   password: string;
   struggles: string[];
   helperType: string;
   preferredTone: string;
   hasCompletedIntake: boolean;
-  avatar_url: string | null; // Avatar URL
+  avatar_url: string | null;
 }
-
-type AuthState = 'login' | 'onboarding' | 'dashboard';
 
 const Dashboard = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { user, loading } = useAuth();
-  const [authState, setAuthState] = useState<AuthState>('login');
   const [activeSection, setActiveSection] = useState<DashboardSection>('home');
-  const [isDemo, setIsDemo] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile>({
     name: '',
     age: 0,
-    pronouns: 1, // Default to They/Them
+    pronouns: 1,
     password: '',
     struggles: [],
     helperType: '',
@@ -42,13 +39,15 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
-    if (user) {
-      // Check if user has completed profile
-      checkUserProfile();
-    } else if (!loading) {
-      setAuthState('login');
+    if (!user && !loading) {
+      navigate('/auth');
+      return;
     }
-  }, [user, loading]);
+    
+    if (user) {
+      checkUserProfile();
+    }
+  }, [user, loading, navigate]);
 
   const checkUserProfile = async () => {
     try {
@@ -60,12 +59,11 @@ const Dashboard = () => {
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching profile:', error);
-        setAuthState('onboarding');
+        navigate('/auth');
         return;
       }
 
       if (data) {
-        // User has profile, go to dashboard
         const profile = {
           name: data.name || 'User',
           age: data.age || 0,
@@ -80,7 +78,6 @@ const Dashboard = () => {
         
         setUserProfile(profile);
         
-        // Also save to Redux store
         dispatch(setProfile({
           id: user?.id || null,
           name: profile.name,
@@ -91,85 +88,13 @@ const Dashboard = () => {
           preferred_tone: profile.preferredTone,
           pronouns: profile.pronouns.toString(),
         }));
-        
-        setAuthState('dashboard');
       } else {
-        // No profile, need onboarding
-        setAuthState('onboarding');
+        navigate('/auth');
       }
     } catch (error) {
       console.error('Error checking profile:', error);
-      setAuthState('onboarding');
+      navigate('/auth');
     }
-  };
-
-  const handleLogin = (isNewUser: boolean, isDemoMode: boolean = false) => {
-    setIsDemo(isDemoMode);
-    
-    if (isDemoMode) {
-      // Demo users can skip or go through onboarding
-      setAuthState('onboarding');
-    }
-    // For real users, useEffect will handle the flow based on auth state
-  };
-
-  const handleIntakeComplete = async (profile: UserProfile) => {
-    if (user && !isDemo) {
-      // Save profile to database
-      try {
-        const { error } = await supabase
-          .from('profiles')
-          .upsert({
-            id: user.id,
-            email: user.email,
-            name: profile.name,
-            age: profile.age,
-            pronouns: profile.pronouns,
-            struggles: profile.struggles,
-            helper_type: profile.helperType,
-            preferred_tone: profile.preferredTone,
-            updated_at: new Date().toISOString()
-          });
-
-        if (error) {
-          console.error('Error saving profile:', error);
-        }
-      } catch (error) {
-        console.error('Error saving profile:', error);
-      }
-    }
-    
-    setUserProfile({ ...profile, hasCompletedIntake: true });
-    
-    // Also save to Redux store
-    dispatch(setProfile({
-      id: user?.id || null,
-      name: profile.name,
-      email: user?.email || '',
-      age: profile.age,
-      avatar_url: profile.avatar_url,
-      helper_type: profile.helperType,
-      preferred_tone: profile.preferredTone,
-      pronouns: profile.pronouns.toString(),
-    }));
-    
-    setAuthState('dashboard');
-  };
-
-  const handleSkipOnboarding = () => {
-    // Set default profile when skipping onboarding
-    setUserProfile({
-      name: user?.email?.split('@')[0] || 'User',
-      age: 0,
-      pronouns: 1, // They/Them
-      password: '',
-      struggles: ['General support'],
-      helperType: 'friend',
-      preferredTone: 'gentle',
-      hasCompletedIntake: true,
-      avatar_url: null
-    });
-    setAuthState('dashboard');
   };
 
   if (loading) {
@@ -183,18 +108,8 @@ const Dashboard = () => {
     );
   }
 
-  if (!user && authState === 'login') {
-    return <LoginForm onLogin={handleLogin} />;
-  }
-
-  if (authState === 'onboarding') {
-    return (
-      <IntakeForm 
-        onComplete={handleIntakeComplete} 
-        onSkip={handleSkipOnboarding}
-        isDemo={isDemo}
-      />
-    );
+  if (!user) {
+    return null; // Will redirect to /auth in useEffect
   }
 
   return (

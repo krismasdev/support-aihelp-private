@@ -7,7 +7,7 @@ const Header: React.FC = () => {
   const navigate = useNavigate();
 
   const handleJoinClick = () => {
-    navigate('/dashboard');
+    navigate('/auth');
   };
 
   return (
