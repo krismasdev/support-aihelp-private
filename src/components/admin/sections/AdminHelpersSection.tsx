@@ -5,7 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-
+import { AdminCreateHelperDialog } from '@/components/admin/helpers/AdminCreateHelperDialog';
+import { AdminEditHelperDialog } from '@/components/admin/helpers/AdminEditHelperDialog';
 interface DefaultHelper {
   id: number;
   name: string;
@@ -22,6 +23,9 @@ interface DefaultHelper {
 export const AdminHelpersSection = () => {
   const [helpers, setHelpers] = useState<DefaultHelper[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingHelper, setEditingHelper] = useState<DefaultHelper | null>(null);
 
   useEffect(() => {
     fetchHelpers();
@@ -29,13 +33,10 @@ export const AdminHelpersSection = () => {
 
   const fetchHelpers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('default_helpers')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.functions.invoke('get-admin-helpers');
 
       if (error) throw error;
-      setHelpers(data || []);
+      setHelpers(data?.data || []);
     } catch (error) {
       console.error('Error fetching helpers:', error);
     } finally {
@@ -47,6 +48,32 @@ export const AdminHelpersSection = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
+  const handleEditHelper = (helper: DefaultHelper) => {
+    setEditingHelper(helper);
+    setShowEditDialog(true);
+  };
+
+  const handleEditComplete = () => {
+    setShowEditDialog(false);
+    setEditingHelper(null);
+    fetchHelpers();
+  };
+
+  const handleToggleDefault = async (helperId: number, setAsDefault: boolean) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('toggle-default-helper', {
+        body: { helperId, setAsDefault }
+      });
+
+      if (error) throw error;
+      
+      // Refresh the helpers list to show updated default status
+      fetchHelpers();
+    } catch (error) {
+      console.error('Error toggling default helper:', error);
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center p-8">Loading...</div>;
   }
@@ -55,7 +82,7 @@ export const AdminHelpersSection = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Default Helpers Management</h1>
-        <Button>
+        <Button onClick={() => setShowCreateDialog(true)}>
           <Plus size={16} className="mr-2" />
           Add Helper
         </Button>
@@ -124,16 +151,23 @@ export const AdminHelpersSection = () => {
                   <TableCell>{helper.interaction_style}</TableCell>
                   <TableCell>{helper.focus}</TableCell>
                   <TableCell>
-                    {helper.is_default ? (
-                      <Badge variant="default">Yes</Badge>
-                    ) : (
-                      <Badge variant="secondary">No</Badge>
-                    )}
+                    <Button
+                      variant={helper.is_default ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleToggleDefault(helper.id, !helper.is_default)}
+                      className={helper.is_default ? "bg-green-600 hover:bg-green-700" : ""}
+                    >
+                      {helper.is_default ? "Yes" : "No"}
+                    </Button>
                   </TableCell>
                   <TableCell>{formatDate(helper.created_at)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleEditHelper(helper)}
+                      >
                         <Edit size={14} />
                       </Button>
                       <Button variant="outline" size="sm">
@@ -147,6 +181,22 @@ export const AdminHelpersSection = () => {
           </Table>
         </CardContent>
       </Card>
+
+      <AdminCreateHelperDialog
+        open={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        onSave={() => {
+          setShowCreateDialog(false);
+          fetchHelpers();
+        }}
+      />
+
+      <AdminEditHelperDialog
+        open={showEditDialog}
+        onClose={() => setShowEditDialog(false)}
+        onSave={handleEditComplete}
+        helper={editingHelper}
+      />
     </div>
   );
 };

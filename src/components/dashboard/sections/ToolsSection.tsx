@@ -40,7 +40,8 @@ export const ToolsSection = () => {
   const [completedTools, setCompletedTools] = useState<any[]>([]);
 
   const handleToolSelect = (toolId: string) => {
-    setSelectedTool(toolId);
+    // Open example.com in a new tab
+    window.open('https://example.com', '_blank');
   };
 
   const handleToolComplete = (data: any) => {

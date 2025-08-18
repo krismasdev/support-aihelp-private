@@ -43,12 +43,12 @@ export const fetchHelpers = createAsyncThunk(
         return rejectWithValue(error.message || 'Failed to fetch helpers');
       }
 
-      if (!data || !data.helpers) {
+      if (!data || !data.data) {
         console.log('No helpers data received');
         return [];
       }
 
-      const mappedHelpers = data.helpers.map((helper: any) => ({
+      const mappedHelpers = data.data.map((helper: any) => ({
         id: helper.id,
         name: helper.name,
         type: helper.type,

@@ -34,6 +34,7 @@ export const AdminUsersSection = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase.functions.invoke('get-users-list');
+      
       if (error) throw error;
       
       setUsers(data.users || []);

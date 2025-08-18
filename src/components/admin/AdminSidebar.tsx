@@ -10,7 +10,8 @@ import {
   Calendar,
   LogOut,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  FolderOpen
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -22,6 +23,7 @@ const sidebarItems = [
   { id: 'users', label: 'Users', icon: Users },
   { id: 'helpers', label: 'Helpers', icon: Bot },
   { id: 'videos', label: 'Videos', icon: Video },
+  { id: 'video-categories', label: 'Video Categories', icon: FolderOpen },
   { id: 'documents', label: 'Documents', icon: FileText },
   { id: 'booking', label: 'Booking A Call', icon: Calendar },
 ];

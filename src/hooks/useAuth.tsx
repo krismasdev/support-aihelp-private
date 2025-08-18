@@ -3,6 +3,7 @@ import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useLocalStorage } from './useLocalStorage';
 import { AuthData, UserProfile } from '@/types/auth';
+import { useNavigate } from 'react-router-dom';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -12,6 +13,8 @@ export const useAuth = () => {
     token: null,
     expiresAt: null,
   });
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Check localStorage first for existing auth
@@ -87,7 +90,7 @@ export const useAuth = () => {
             });
           console.log(data.data.role);
           if (data.data.role === "admin") {
-            window.location.href = "/admin";
+            navigate("/admin");
           }
           // else if(data.data.role === "user") {
           //   window.location.href = "./dashboard";
