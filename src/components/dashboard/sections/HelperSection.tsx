@@ -5,7 +5,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, Users, Loader2 } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
-import { selectUserId } from '@/store/userSlice';
+import { selectUserId, selectUserSelectedHelper } from '@/store/userSlice';
+import { fetchUserProfile } from '@/store/profileActions';
 import { selectHelpers, selectHelpersLoading, selectHelpersError, selectDefaultHelper, fetchHelpers } from '@/store/helperSlice';
 import { HelperCard } from '@/components/dashboard/helpers/HelperCard';
 import { CreateHelperDialog } from '@/components/dashboard/helpers/CreateHelperDialog';
@@ -22,6 +23,7 @@ export const HelperSection = ({ userProfile }: HelperSectionProps) => {
   const isLoading = useSelector(selectHelpersLoading);
   const error = useSelector(selectHelpersError);
   const defaultHelper = useSelector(selectDefaultHelper);
+  const selectedHelperId = useSelector(selectUserSelectedHelper);
   const userId = useSelector(selectUserId);
 
   console.log(userId);
@@ -100,10 +102,11 @@ export const HelperSection = ({ userProfile }: HelperSectionProps) => {
     setShowQuiz(false);
     setEditingHelper(null);
   };
+  
   const handleSelectHelper = async (helper: any) => {
     try {
       setSelectingHelper(helper.id);
-      console.log('Setting default helper:', helper.id, 'for user:', userId);
+      console.log('Setting selected helper:', helper.id, 'for user:', userId);
       
       // Call the edge function to update database
       const { data, error } = await supabase.functions.invoke('set-default-helper', {
@@ -114,17 +117,18 @@ export const HelperSection = ({ userProfile }: HelperSectionProps) => {
       });
 
       if (error) {
-        console.error('Error setting default helper:', error);
+        console.error('Error setting selected helper:', error);
         return;
       }
 
-      console.log('Default helper updated successfully:', data);
+      console.log('Selected helper updated successfully:', data);
       
       // Update local state
       setActiveHelper(helper);
       
-      // Refresh helpers data to get updated is_default values
-      dispatch(fetchHelpers(userId) as any);
+      // Refresh user profile to get updated selected_helper value
+      // This will also trigger the defaultHelper selector to update
+      dispatch(fetchUserProfile(userId) as any);
       
     } catch (error) {
       console.error('Error calling set-default-helper function:', error);

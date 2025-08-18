@@ -27,6 +27,7 @@ export const fetchUserProfile = createAsyncThunk(
         helper_type: data.helper_type || '',
         preferred_tone: data.preferred_tone || '',
         pronouns: data.pronouns || null,
+        selected_helper: data.selected_helper
       };
 
       return profile;

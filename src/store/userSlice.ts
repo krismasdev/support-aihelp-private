@@ -10,6 +10,7 @@ export interface UserProfile {
   helper_type: string | null;
   preferred_tone: string | null;
   pronouns: string | null;
+  selected_helper: string | null;
 }
 
 interface UserState {
@@ -28,6 +29,7 @@ const initialState: UserState = {
     helper_type: null,
     preferred_tone: null,
     pronouns: null,
+    selected_helper: null
   },
   isLoading: false,
   error: null,
@@ -158,5 +160,6 @@ export const selectUserAvatarUrl = (state: { user: UserState }) => state.user.pr
 export const selectUserHelperType = (state: { user: UserState }) => state.user.profile.helper_type;
 export const selectUserPreferredTone = (state: { user: UserState }) => state.user.profile.preferred_tone;
 export const selectUserPronouns = (state: { user: UserState }) => state.user.profile.pronouns;
+export const selectUserSelectedHelper = (state: { user: UserState }) => state.user.profile.selected_helper;
 
 export default userSlice.reducer;

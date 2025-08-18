@@ -88,7 +88,7 @@ export const AdminHelpersSection = () => {
         </Button>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Total Helpers</CardTitle>
@@ -96,16 +96,6 @@ export const AdminHelpersSection = () => {
           <CardContent>
             <p className="text-3xl font-bold">{helpers.length}</p>
             <p className="text-sm text-gray-500">Default helpers available</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Active Helpers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{helpers.filter(h => h.is_default).length}</p>
-            <p className="text-sm text-gray-500">Marked as default</p>
           </CardContent>
         </Card>
         
@@ -134,7 +124,6 @@ export const AdminHelpersSection = () => {
                 <TableHead>Tone</TableHead>
                 <TableHead>Style</TableHead>
                 <TableHead>Focus</TableHead>
-                <TableHead>Default</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -150,16 +139,6 @@ export const AdminHelpersSection = () => {
                   </TableCell>
                   <TableCell>{helper.interaction_style}</TableCell>
                   <TableCell>{helper.focus}</TableCell>
-                  <TableCell>
-                    <Button
-                      variant={helper.is_default ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handleToggleDefault(helper.id, !helper.is_default)}
-                      className={helper.is_default ? "bg-green-600 hover:bg-green-700" : ""}
-                    >
-                      {helper.is_default ? "Yes" : "No"}
-                    </Button>
-                  </TableCell>
                   <TableCell>{formatDate(helper.created_at)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
@@ -175,6 +154,7 @@ export const AdminHelpersSection = () => {
                       </Button>
                     </div>
                   </TableCell>
+
                 </TableRow>
               ))}
             </TableBody>

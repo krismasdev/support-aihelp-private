@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Send, Mic, Phone, Loader2, Pause, BookOpen, Wrench, Package } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { VoiceCallDialog } from '../voice/VoiceCallDialog';
-import { selectUserId } from '@/store/userSlice';
+import { selectUserId, updateProfile } from '@/store/userSlice';
 import { fetchHelpers, selectHelpers, selectDefaultHelper } from '@/store/helperSlice';
 import { fetchMessages, sendMessage, selectMessagesForHelper, selectMessagesLoading } from '@/store/messagesSlice';
 import { supabase } from '@/lib/supabase';
@@ -135,7 +135,14 @@ export const ChatSection = ({ userProfile }: ChatSectionProps) => {
           user_id: userId
         }
       });
+      
+      // Update the user profile in Redux store to reflect the new selected_helper
+      dispatch(updateProfile({ selected_helper: helper.id }) as any);
+      
+      // Set the active helper immediately
       setActiveHelper(helper);
+      
+      // Refresh helpers to get updated data
       dispatch(fetchHelpers(userId) as any);
     } catch (error) {
       console.error('Error setting default helper:', error);

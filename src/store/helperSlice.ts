@@ -116,7 +116,9 @@ export const { addHelper, removeHelper, updateHelper, clearHelpers, setError } =
 export const selectHelpers = (state: { helpers: HelperState }) => state.helpers.helpers;
 export const selectHelpersLoading = (state: { helpers: HelperState }) => state.helpers.isLoading;
 export const selectHelpersError = (state: { helpers: HelperState }) => state.helpers.error;
-export const selectDefaultHelper = (state: { helpers: HelperState }) => 
-  state.helpers.helpers.find(helper => helper.isDefault);
+export const selectDefaultHelper = (state: { helpers: HelperState; user: { profile: { selected_helper: string | null } } }) => {
+  const selectedHelperId = state.user.profile.selected_helper;
+  return selectedHelperId ? state.helpers.helpers.find(helper => helper.id === selectedHelperId) : null;
+};
 
 export default helperSlice.reducer;
